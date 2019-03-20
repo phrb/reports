@@ -1,0 +1,50 @@
+\begin{thebibliography}{1}
+
+\bibitem{ansel2014opentuner}
+Jason Ansel, Shoaib Kamil, Kalyan Veeramachaneni, Jonathan Ragan-Kelley,
+  Jeffrey Bosboom, Una-May O'Reilly, and Saman Amarasinghe.
+\newblock Opentuner: An extensible framework for program autotuning.
+\newblock In {\em Proceedings of the 23rd international conference on Parallel
+  architectures and compilation}, pages 303--316. ACM, 2014.
+
+\bibitem{balaprakash2012spapt}
+Prasanna Balaprakash, Stefan~M Wild, and Boyana Norris.
+\newblock {SPAPT}: Search problems in automatic performance tuning.
+\newblock {\em Procedia Computer Science}, 9:1959--1968, 2012.
+
+\bibitem{box2005statistics}
+George~EP Box, J~Stuart Hunter, and William~Gordon Hunter.
+\newblock {\em Statistics for experimenters: design, innovation, and
+  discovery}, volume~2.
+\newblock Wiley-Interscience New York, 2005.
+
+\bibitem{bruel2017autotuning}
+Pedro Bruel, Marcos Amarís, and Alfredo Goldman.
+\newblock Autotuning cuda compiler parameters for heterogeneous applications
+  using the opentuner framework.
+\newblock {\em Concurrency and Computation: Practice and Experience}, pages
+  e3973--n/a, 2017.
+
+\bibitem{bruel2017autotuninghls}
+Pedro Bruel, Alfredo Goldman, Sai~Rahul Chalamalasetti, and Dejan Milojicic.
+\newblock Autotuning high-level synthesis for fpgas using opentuner and legup.
+\newblock In {\em International Conference on Reconfigurable Computing and
+  FPGAs (ReConFig)}, 2017.
+
+\bibitem{bukh1992art}
+Per Nikolaj~D Bukh.
+\newblock {\em The art of computer systems performance analysis, techniques for
+  experimental design, measurement, simulation and modeling}.
+\newblock JSTOR, 1992.
+
+\bibitem{fisher1937design}
+Ronald~Aylmer Fisher.
+\newblock {\em The design of experiments}.
+\newblock Oliver And Boyd; Edinburgh; London, 1937.
+
+\bibitem{montgomery2017design}
+Douglas~C Montgomery.
+\newblock {\em Design and analysis of experiments}.
+\newblock John wiley \& sons, 2017.
+
+\end{thebibliography}

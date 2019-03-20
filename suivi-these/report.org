@@ -2,29 +2,300 @@
 # -*- coding: utf-8 -*-
 #+STARTUP: overview indent inlineimages logdrawer
 
-#+TITLE: Report Stub using Orgmode
-#+AUTHOR: Pedro Bruel
+#+TITLE: Autotuning under Tight Budget Constraints:
+#+TITLE: @@latex: \\@@
+#+TITLE: A Transparent Design of Experiments Approach
+#+AUTHOR: Pedro Bruel, Arnaud Legrand
 #+LANGUAGE:    en
 #+TAGS: noexport(n) Stats(S)
 #+TAGS: Teaching(T) R(R) OrgMode(O) Python(P)
 #+TAGS: Book(b) DOE(D) Code(C) NODAL(N) FPGA(F) Autotuning(A) Arnaud(r)
 #+TAGS: DataVis(v) PaperReview(W)
 #+EXPORT_SELECT_TAGS: Blog
-#+OPTIONS:   H:3 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:nil skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+EXPORT_SELECT_TAGS: export
 #+EXPORT_EXCLUDE_TAGS: noexport
 #+COLUMNS: %25ITEM %TODO %3PRIORITY %TAGS
 #+SEQ_TODO: TODO(t!) STARTED(s!) WAITING(w@) APPT(a!) | DONE(d!) CANCELLED(c!) DEFERRED(f!)
 
-#+LATEX_CLASS: org-elsarticle
-#+LATEX_CLASS_OPTIONS: [final,12pt,a4paper]
+#+LATEX_CLASS: article
+#+LATEX_CLASS_OPTIONS: [a4paper,titlepage]
 
-#+LATEX_HEADER: \input{latex/configuration.tex}
+#+LATEX_HEADER: \usepackage{pdfpages}
+#+LATEX_HEADER: \usepackage{graphicx}
+#+LATEX_HEADER: \usepackage{amssymb}
+#+LATEX_HEADER: \usepackage{booktabs}
+#+LATEX_HEADER: \usepackage{xcolor}
+#+LATEX_HEADER: \usepackage[utf8]{inputenc}
+#+LATEX_HEADER: \usepackage{multirow}
+#+LATEX_HEADER: \usepackage{caption}
+#+LATEX_HEADER: \usepackage[margin=2cm]{geometry}
+#+LATEX_HEADER: \usepackage{fancyhdr}
+#+LATEX_HEADER: \usepackage{sourcecodepro}
+#+LATEX_HEADER: \usepackage{array}
+#+LATEX_HEADER: \usepackage{colortbl}
+#+LATEX_HEADER: \usepackage{listings}
+#+LATEX_HEADER: \usepackage[english]{babel}
+#+LATEX_HEADER: \usepackage[scale=2]{ccicons}
+#+LATEX_HEADER: \usepackage{hyperref}
+#+LATEX_HEADER: \usepackage{relsize}
+#+LATEX_HEADER: \usepackage{amsmath}
+#+LATEX_HEADER: \usepackage{bm}
+#+LATEX_HEADER: \usepackage{amsfonts}
+#+LATEX_HEADER: \usepackage{bm}
+#+LATEX_HEADER: \usepackage{wasysym}
+#+LATEX_HEADER: \usepackage{float}
+#+LATEX_HEADER: \usepackage{ragged2e}
+#+LATEX_HEADER: \usepackage{textcomp}
+#+LATEX_HEADER: \usepackage{pgfplots}
+#+LATEX_HEADER: \usepackage{todonotes}
+#+LATEX_HEADER: \usepgfplotslibrary{dateplot}
+#+LATEX_HEADER: \lstset{ %
+#+LATEX_HEADER:   backgroundcolor={},
+#+LATEX_HEADER:   basicstyle=\ttfamily\scriptsize,
+#+LATEX_HEADER:   breakatwhitespace=true,
+#+LATEX_HEADER:   breaklines=true,
+#+LATEX_HEADER:   captionpos=n,
+#+LATEX_HEADER:   extendedchars=true,
+#+LATEX_HEADER:   frame=n,
+#+LATEX_HEADER:   language=R,
+#+LATEX_HEADER:   rulecolor=\color{black},
+#+LATEX_HEADER:   showspaces=false,
+#+LATEX_HEADER:   showstringspaces=false,
+#+LATEX_HEADER:   showtabs=false,
+#+LATEX_HEADER:   stepnumber=2,
+#+LATEX_HEADER:   stringstyle=\color{gray},
+#+LATEX_HEADER:   tabsize=2,
+#+LATEX_HEADER: }
+#+LATEX_HEADER: \definecolor{Accent}{HTML}{157FFF}
+#+LATEX_HEADER: \renewcommand*{\UrlFont}{\ttfamily\scriptsize\relax}
+#+LATEX_HEADER: \graphicspath{{./img/}}
 
+#+LATEX_HEADER: % https://tex.stackexchange.com/questions/129978/how-to-remove-section-subsection-titles
+#+LATEX_HEADER: \newcommand{\fakesection}[1]{%
+#+LATEX_HEADER:   \par\refstepcounter{section}% Increase section counter
+#+LATEX_HEADER:   \sectionmark{#1}% Add section mark (header)
+#+LATEX_HEADER:   \addcontentsline{toc}{section}{\protect\numberline{\thesection}#1}% Add section to ToC
+#+LATEX_HEADER:   % Add more content here, if needed.
+#+LATEX_HEADER: }
+#+LATEX_HEADER: \newcommand{\fakesubsection}[1]{%
+#+LATEX_HEADER:   \par\refstepcounter{subsection}% Increase subsection counter
+#+LATEX_HEADER:   \subsectionmark{#1}% Add subsection mark (header)
+#+LATEX_HEADER:   \addcontentsline{toc}{subsection}{\protect\numberline{\thesubsection}#1}% Add subsection to ToC
+#+LATEX_HEADER:   % Add more content here, if needed.
+#+LATEX_HEADER: }
 
-* First Section
-#+LATEX: \blindtext[2]
-#+LATEX: \blinditemize[5]
-#+LATEX: \blindmathtrue
-#+LATEX: \blindmathpaper
+#+LATEX: \clearpage
+* Introduction
+The use of heterogeneous programming models and computer architectures
+in  High-Performance   Computing  (HPC)  has  increased   despite  the
+difficulty  of   optimizing  and  configuring  legacy   code,  and  of
+developing new solutions for heterogeneous computing. Due to the great
+diversity of programming models and  architectures, there is no single
+optimization strategy that fits all problems and architectures.
+
+An optimization solution tailored for a specific problem requires time
+and expert knowledge.   Using general optimizations can  be faster and
+cheaper,  often  at  the   cost  of  application-specific  performance
+improvements. A possible solution to  this trade-off is the automation
+of the program optimization process.
+
+The automated  selection of algorithms and  configuration of programs,
+or  /autotuning/, casts  the program  optimization problem  as a  search
+problem. The  possible configurations  and optimizations of  a program
+are  used to  compose  a  /search space/,  and  search  is performed  by
+evaluating the  impact of each  configuration on the  initial program.
+Using the increasingly available  computing power to measure different
+versions  of a  program, an  /autotuner/ searches  for good  selections,
+configurations, and  optimizations. Each measurement provides  a value
+for a meaningful program metric, such  as execution time and memory or
+power consumption.
+
+From the  implementation in a  high-level programming language  to the
+instruction selection  in code  generation, it  is possible  to expose
+optimization  and configuration  opportunities  in  various stages  of
+program development and execution.  The time to measure the results of
+an optimization choice depends on the selected stage and on the metric
+to  be optimized.   Some  stages  are more  expensive  to measure  and
+therefore to  optimize.  For example, access  to certain architectures
+might be  costly and  limited, or  it may  take a  long time  to solve
+certain problem instances.
+
+The initial objective of this thesis was to study the effectiveness of
+search  heuristics,   such  as  simulated  annealing,   on  autotuning
+problems. Our first target autotuning domain was the set of parameters
+of a compiler  for GPU programs.  The search heuristics  for this case
+study       were      implemented       using      the       OpenTuner
+framework\nbsp\cite{ansel2014opentuner}, and  consisted of an  ensemble of
+search heuristics coordinated by  a Multi-Armed Bandit algorithm.  The
+autotuner searched for a set  of compilation parameters that optimized
+17  heterogeneous GPU  kernels,  from a  set  of approximately  $10^{23}$
+possible combinations of all parameters.  With 1.5h autotuning runs we
+have  achieved  up  to  $4\times$  speedup  in  comparison  with  the  CUDA
+compiler's  high-level optimizations.   The compilation  and execution
+times of programs  in this autotuning domain are  relatively fast, and
+were in  the order of  a few seconds  to a minute.   Since measurement
+costs  are  relatively  small,   search  heuristics  could  find  good
+optimizations  using  as  many  measurements as  needed.   A  detailed
+description     of    this     work     is     available    in     our
+paper\nbsp\cite{bruel2017autotuning}  published  in the  /Concurrency  and
+Computation: Practice  and Experience/ journal, which  is reproduced in
+Appendix\nbsp\ref{sec:CCPE}.
+
+Our   next   case   study   was  developed   in   collaboration   with
+/Hewlett-Packard  Enterprise/,  and  consisted   of  applying  the  same
+heuristics-based   autotuning  approach   to   the  configuration   of
+parameters involved  in the generation of  FPGA hardware specification
+from  source code  in  the  C language,  a  process called  /High-Level
+Synthesis/ (HLS).  The main difference  from our work with GPU compiler
+parameters was  the time to  obtain the hardware  specification, which
+could be in the order of hours for a single kernel.
+
+In this more complex scenario, we achieved up to $2\times$ improvements for
+different  hardware  metrics  using  conventional  search  algorithms.
+These  results were  obtained in  a  simple HLS  benchmark, for  which
+compilation times were  in the order of minutes. The  search space was
+composed of  approximately $10^{123}$  possible configurations,  which is
+much  larger  than  the  search   space  in  our  previous  work  with
+GPUs. Search space size and the  larger measurement cost meant that we
+did  not  expect  the  heuristics-based  approach  to  have  the  same
+effectiveness  as  in the  GPU  compiler  case  study. This  work  was
+published\nbsp\cite{bruel2017autotuninghls} at the 2017 /IEEE International
+Conference on ReConFigurable Computing and FPGAs/, and is reproduced in
+Appendix\nbsp\ref{sec:reconfig}.
+
+Approaches   using  classical   machine   learning  and   optimization
+techniques  would  not  scale  to  industrial-level  HLS,  where  each
+compilation can take hours to  complete.  Search space properties also
+increase the  complexity of the  problem, in particular  its structure
+composed   of  binary,   factorial  and   continuous  variables   with
+potentially complex  interactions.  Our results on  autotuning HLS for
+FPGAs  corroborate the  conclusion  that the  empirical autotuning  of
+expensive-to-evaluate  functions, such  as  those that  appear on  the
+autotuning  of  HLS,  require  a  more  /parsimonious/  and  /transparent/
+approach.
+
+The next step  taken on this work was study  the Design of Experiments
+(DoE)  methodology, with  the goal  of developing  a parsimonious  and
+transparent  approach  to  autotuning.   One  of  the  first  detailed
+descriptions and mathematical treatment of DoE was presented by Ronald
+Fisher\nbsp\cite{fisher1937design}  in   his  1937  book  /The   Design  of
+Experiments/, where  he discussed principles of  experimentation, latin
+square sampling and  factorial designs.  Later books such  as the ones
+from  Jain\nbsp\cite{bukh1992art},  Montgomery\nbsp\cite{montgomery2017design}
+and Box /et  al./\nbsp\cite{box2005statistics} present comprehensive and
+detailed foundations. Techniques based on DoE are parsimonious because
+they allow decreasing the number of measurements required to determine
+certain  relationships   between  parameters  and  metrics,   and  are
+transparent because each choice of parameter value can be justified by
+the results of statistical tests.
+
+In  DoE terminology,  a /design/  is a  plan for  executing a  series of
+measurements,  or   /experiments/,  whose   objective  is   to  identify
+relationships  between  /factors/  and  /responses/.   While  factors  and
+responses can refer  to different concrete entities  in other domains,
+in computer  experiments factors  can be configuration  parameters for
+algorithms  and  compilers, for  example,  and  responses can  be  the
+execution time or memory consumption of a program.
+
+Designs  can  serve  diverse   purposes,  from  identifying  the  most
+significant factors for performance, to fitting analytical performance
+models  for   the  response.   The   field  of  DoE   encompasses  the
+mathematical  formalization   of  the  construction   of  experimental
+designs.   More practical  works in  the field  present algorithms  to
+generate designs with different objectives and restrictions.
+
+Our application of the DoE methodology requires support for factors of
+different types and  number of possible values, such  as binary flags,
+integer and floating point numerical values and unordered enumerations
+of abstract values.  We also need designs that minimize  the number of
+experiments  needed for  identifying the  most relevant  factors in  a
+given  problem, since  at  this moment  we are  not  interesting in  a
+precise analytical model.
+
+The  design construction  techniques that  fit these  requirements are
+limited.   Considering flexibility  of application  and effectiveness,
+the  best  candidate we  have  found  so  far are  /D-Optimal/  designs.
+Considering that we are going to analyse the results of an experiments
+plan, the  /D-Efficiency/ of a  design is inversely proportional  to the
+/geometric mean/ of  the /eigenvalues/ of the plan's  /covariance matrix/. A
+D-Optimal design has  the best D-Efficiency.  Our  current approach is
+based on D-Optimal designs.
+
+In  the first  part of  the  stay of  the student  in the  /Laboratoire
+d'Informatique de  Grenoble/ (LIG), we performed  a comprehensive study
+of the area of /Design of Experiments/ and developed an initial approach
+that applies  this knowledge to  the autotuning of  computer programs.
+We obtained promising results on  the autotuning of a Laplacian kernel
+for  GPUs  where  the  entire  search  space  was  available  and  the
+performance model was known.  We are now evaluating the performance of
+our        method        on         the        SPAPT        autotuning
+benchmark\nbsp{}\cite{balaprakash2012spapt},   which  contains   a  set   of
+parametrized  High-Performance  Computing   kernels  and  applications
+presenting large search  spaces and difficult search  problems. We are
+using  computational resources  from Grid5000  to run  experiments. We
+intend to submit  the results of the initial  promising application of
+our  approach and  of the  experiments using  SPAPT to  the 33rd  IEEE
+International Parallel & Distributed Processing Symposium (IPDPS).
+
+The rest of this document  is organized as follows. Section [[Objectives]]
+presents and discusses our  objectives.  Section [[Schedule]] presents the
+work plan and schedule. Annex\nbsp\ref{sec:CV}.
+* Objectives
+An effective  autotuning strategy for  expensive-to-evaluate functions
+should be semi-automatic  and strongly build on  previous knowledge of
+FPGA compiling experts. We believe  techniques inspired from Design of
+Experiments  and from  the ``sequential  approach'' are  likely to  be
+effective in this context.
+
+We  are interested  in extending  this  approach to  FPGAs using  real
+applications  and  industry  partners  who   are  able  to  guide  the
+process. We  expect that  devising new  robust and  cheap experimental
+designs that enable mixing  binary, factorial and continuous variables
+will  present   an  interesting  challenge.   This   collaboration  is
+therefore an interesting  opportunity. The stay of 18  months of Pedro
+Henrique Rocha Bruel at  Communauté Université Grenoble Alpes (ComUGA)
+is collaborating in joining efforts and achieving progress.
+* Schedule
+
+#+ATTR_LATEX: :booktabs t :align llll
+|------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| @@latex: \multirow{2}{*}{\textbf{Planned Research Activities}}@@ | @@latex: \multicolumn{3}{c}{\textbf{Periods}}@@                                                                                                             |
+|                                                                  | @@latex: \multicolumn{1}{c}{\footnotesize{04/19-08/19}} & \multicolumn{1}{c}{\footnotesize{09/19-01/20}} & \multicolumn{1}{c}{\footnotesize{02/20-05/20}}@@ |
+|------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| /Sampling for D-Optimal Designs/                                   | @@latex: \multicolumn{2}{c}{\cellcolor[HTML]{C0C0C0}} &@@                                                                                                   |
+| /User-Centric Optimization/                                        | @@latex: \multicolumn{2}{c}{\cellcolor[HTML]{ACACAC}} &@@                                                                                                   |
+| /Extended Paper/                                                   | @@latex: & \multicolumn{2}{c}{\cellcolor[HTML]{999999}}@@                                                                                                   |
+| /Case Study on FPGAs/                                              | @@latex: & \multicolumn{2}{c}{\cellcolor[HTML]{868686}}@@                                                                                                   |
+| /Thesis Writing/                                                 | @@latex: &  & \cellcolor[HTML]{737373}@@                                                                                                                    |
+|------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+#+begin_export latex
+\bibliographystyle{plain}
+\bibliography{references}
+#+end_export
+
+#+BEGIN_EXPORT latex
+\clearpage
+\appendix
+\fakesection{CV}
+\label{sec:CV}
+\lhead{\textbf{A. CV}}
+\includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/cv.pdf}
+
+\fakesection{Publication at the CCPE Journal}
+\label{sec:CCPE}
+\lhead{\textbf{B. Publication at the CCPE Journal}}
+\includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/ccpe16.pdf}
+
+\fakesection{Publication at the IEEE ReConFig Conference}
+\label{sec:reconfig}
+\lhead{\textbf{C. Publication at the IEEE ReConFig Conference}}
+\includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/reconfig17.pdf}
+
+\fakesection{Publication at the CCGRID Conference}
+\label{sec:CCGRID}
+\lhead{\textbf{D. Publication at the CCGRID Conference}}
+\includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/ccgrid19.pdf}
+#+END_EXPORT
