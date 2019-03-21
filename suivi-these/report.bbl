@@ -1,4 +1,4 @@
-\begin{thebibliography}{1}
+\begin{thebibliography}{10}
 
 \bibitem{ansel2014opentuner}
 Jason Ansel, Shoaib Kamil, Kalyan Veeramachaneni, Jonathan Ragan-Kelley,
@@ -31,6 +31,14 @@ Pedro Bruel, Alfredo Goldman, Sai~Rahul Chalamalasetti, and Dejan Milojicic.
 \newblock In {\em International Conference on Reconfigurable Computing and
   FPGAs (ReConFig)}, 2017.
 
+\bibitem{bruel2019autotuning}
+Pedro Bruel, Steven Quinito~Masnada, Brice Videau, Arnaud Legrand, Jean-Marc
+  Vincent, and Alfredo Goldman.
+\newblock Autotuning under tight budget constraints: A transparent design of
+  experiments approach.
+\newblock In {\em The 19th Annual IEEE/ACM International Symposium in Cluster,
+  Cloud, and Grid Computing (CCGrid 2019)}. IEEE/ACM, 2019.
+
 \bibitem{bukh1992art}
 Per Nikolaj~D Bukh.
 \newblock {\em The art of computer systems performance analysis, techniques for
@@ -46,5 +54,10 @@ Ronald~Aylmer Fisher.
 Douglas~C Montgomery.
 \newblock {\em Design and analysis of experiments}.
 \newblock John wiley \& sons, 2017.
+
+\bibitem{seymour2008comparison}
+Keith Seymour, Haihang You, and Jack Dongarra.
+\newblock A comparison of search heuristics for empirical code optimization.
+\newblock In {\em CLUSTER}, pages 421--429, 2008.
 
 \end{thebibliography}

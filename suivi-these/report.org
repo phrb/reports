@@ -117,33 +117,99 @@ instruction selection  in code  generation, it  is possible  to expose
 optimization  and configuration  opportunities  in  various stages  of
 program development and execution.  The time to measure the results of
 an optimization choice depends on the selected stage and on the metric
-to  be optimized.   Some  stages  are more  expensive  to measure  and
-therefore to  optimize.  For example, access  to certain architectures
-might be  costly and  limited, or  it may  take a  long time  to solve
-certain problem instances.
+to be  optimized.  Certain stages  are more  costly to measure  and to
+optimize, because  the access  to special hardware  can be  costly and
+constrained, and measurements may take a long time.
 
-The initial objective of this thesis was to study the effectiveness of
-search  heuristics,   such  as  simulated  annealing,   on  autotuning
-problems. Our first target autotuning domain was the set of parameters
-of a compiler  for GPU programs.  The search heuristics  for this case
-study       were      implemented       using      the       OpenTuner
-framework\nbsp\cite{ansel2014opentuner}, and  consisted of an  ensemble of
-search heuristics coordinated by  a Multi-Armed Bandit algorithm.  The
-autotuner searched for a set  of compilation parameters that optimized
-17  heterogeneous GPU  kernels,  from a  set  of approximately  $10^{23}$
-possible combinations of all parameters.  With 1.5h autotuning runs we
-have  achieved  up  to  $4\times$  speedup  in  comparison  with  the  CUDA
-compiler's  high-level optimizations.   The compilation  and execution
-times of programs  in this autotuning domain are  relatively fast, and
-were in  the order of  a few seconds  to a minute.   Since measurement
-costs  are  relatively  small,   search  heuristics  could  find  good
-optimizations  using  as  many  measurements as  needed.   A  detailed
-description     of    this     work     is     available    in     our
-paper\nbsp\cite{bruel2017autotuning}  published  in the  /Concurrency  and
-Computation: Practice  and Experience/ journal, which  is reproduced in
-Appendix\nbsp\ref{sec:CCPE}.
+Search algorithms based on machine  learning or heuristics are not the
+best candidates for autotuning  domains where measurements are lengthy
+and costly, such as  compiling industrial-level FPGA programs, because
+these  algorithms  rely on  the  availability  of  a large  number  of
+measurements. They also assume good optimizations are reachable from a
+starting position, and that tendencies  observed locally in the search
+space  are exploitable.   These assumptions  are not  usually true  in
+common  autotuning  domains,  as  shown  in the  work  of  Seymour  /et
+al./\nbsp\cite{seymour2008comparison}.
 
-Our   next   case   study   was  developed   in   collaboration   with
+Autotuning search spaces also  usually have non-linear constraints and
+undefined   regions,  which   are  also   expected  to   decrease  the
+effectiveness of search  based on heuristics and  machine learning. An
+additional downside  to heuristics- and machine  learning-based search
+is  that,  usually,  optimization  choices cannot  be  explained,  and
+knowledge  gained  during  optimization  is not  reusable.   The  main
+objective of this  thesis is to study how to  overcome the reliance on
+these assumptions  about search  spaces, and  the lack  of explainable
+optimizations, from the point of view of a Design of Experiments (DoE)
+methodology to autotuning.
+
+One of the  first detailed descriptions and  mathematical treatment of
+DoE was presented by Ronald Fisher\nbsp\cite{fisher1937design} in his 1937
+book  /The Design  of  Experiments/, where  he  discussed principles  of
+experimentation, latin  square sampling and factorial  designs.  Later
+books    such    as    the    ones    from    Jain\nbsp\cite{bukh1992art},
+Montgomery\nbsp\cite{montgomery2017design}        and        Box        /et
+al./\nbsp\cite{box2005statistics}  present  comprehensive and  detailed
+foundations.  Techniques  based on  DoE are /parsimonious/  because they
+allow  decreasing the  number  of measurements  required to  determine
+certain  relationships   between  parameters  and  metrics,   and  are
+/transparent/ because each choice of parameter value can be justified by
+the results of statistical tests.
+
+In  DoE terminology,  a /design/  is a  plan for  executing a  series of
+measurements,  or   /experiments/,  whose   objective  is   to  identify
+relationships  between  /factors/  and  /responses/.   While  factors  and
+responses can refer  to different concrete entities  in other domains,
+in computer  experiments factors  can be configuration  parameters for
+algorithms  and  compilers, for  example,  and  responses can  be  the
+execution time or memory consumption of a program.
+
+Designs  can  serve  diverse   purposes,  from  identifying  the  most
+significant factors for performance, to fitting analytical performance
+models  for   the  response.   The   field  of  DoE   encompasses  the
+mathematical  formalization   of  the  construction   of  experimental
+designs.   More practical  works in  the field  present algorithms  to
+generate designs with different objectives and restrictions.
+
+This document presents a mid-term  report of the work performed during
+this thesis.  The  work started in 2015, advised  by Professor Alfredo
+Goldman, in the Computer Science PhD  program of the University of São
+Paulo, Brazil, which lasts 5 years.  The student started its /cotutelle/
+thesis  at  the University  of  Grenoble  Alpes  in 2017,  advised  by
+Professor Arnaud  Legrand, and the  predicted date for the  defense is
+May 2020. This document  is organized as follows.  Sections\nbsp[[Autotuning
+with  Search Heuristics]]  and\nbsp[[A Design  of Experiments  Methodology for
+Autotuning]] describe succinctly the work done applying heuristics-based
+search  algorithms   on  compiler  parameters  for   GPUs  and  FPGAs,
+respectively.  Section\nbsp[[Objectives]]  discusses  our current  pursuit  to
+refine our methodology for autotuning and include the user more in the
+optimization process.  Section\nbsp[[Schedule]]  presents a tentative schedule
+for future work. Appendix\nbsp\ref{sec:CV}  presents the student's /CV/, and
+Appendices\nbsp\ref{sec:CCPE},    \ref{sec:reconfig},    \ref{sec:CCGRID},
+\ref{sec:dopt} and\nbsp\ref{sec:analyseCCGRID}  present extensive material
+that has been published or already written.
+
+* Autotuning with Search Heuristics
+We  initially  studied in  this  thesis  the effectiveness  of  search
+heuristics, such  as simulated annealing, on  autotuning problems. Our
+first target autotuning domain was the set of parameters of a compiler
+for  GPU programs.   The search  heuristics for  this case  study were
+implemented  using the  OpenTuner framework\nbsp\cite{ansel2014opentuner},
+and consisted  of an  ensemble of search  heuristics coordinated  by a
+Multi-Armed Bandit  algorithm.  The  autotuner searched  for a  set of
+compilation parameters  that optimized  17 heterogeneous  GPU kernels,
+from  a  set of  approximately  $10^{23}$  possible combinations  of  all
+parameters.  With  1.5h autotuning  runs we have  achieved up  to $4\times$
+speedup   in   comparison   with  the   CUDA   compiler's   high-level
+optimizations.   The compilation  and execution  times of  programs in
+this autotuning domain are relatively fast, and were in the order of a
+few  seconds to  a  minute.  Since  measurement  costs are  relatively
+small, search heuristics  could find good optimizations  using as many
+measurements  as  needed.  A  detailed  description  of this  work  is
+available  in our  paper\nbsp\cite{bruel2017autotuning}  published in  the
+/Concurrency and Computation: Practice and Experience/ journal, which is
+reproduced in Appendix\nbsp\ref{sec:CCPE}.
+
+The   next   case   study   was  developed   in   collaboration   with
 /Hewlett-Packard  Enterprise/,  and  consisted   of  applying  the  same
 heuristics-based   autotuning  approach   to   the  configuration   of
 parameters involved  in the generation of  FPGA hardware specification
@@ -173,43 +239,16 @@ composed   of  binary,   factorial  and   continuous  variables   with
 potentially complex  interactions.  Our results on  autotuning HLS for
 FPGAs  corroborate the  conclusion  that the  empirical autotuning  of
 expensive-to-evaluate  functions, such  as  those that  appear on  the
-autotuning  of  HLS,  require  a  more  /parsimonious/  and  /transparent/
-approach.
+autotuning  of  HLS,  require  a  more  parsimonious  and  transparent
+approach, that can potentially be  achieved using the DoE methodology.
+The next section describes our work on applying the DoE methodology to
+autotuning.
 
-The next step  taken on this work was study  the Design of Experiments
-(DoE)  methodology, with  the goal  of developing  a parsimonious  and
-transparent  approach  to  autotuning.   One  of  the  first  detailed
-descriptions and mathematical treatment of DoE was presented by Ronald
-Fisher\nbsp\cite{fisher1937design}  in   his  1937  book  /The   Design  of
-Experiments/, where  he discussed principles of  experimentation, latin
-square sampling and  factorial designs.  Later books such  as the ones
-from  Jain\nbsp\cite{bukh1992art},  Montgomery\nbsp\cite{montgomery2017design}
-and Box /et  al./\nbsp\cite{box2005statistics} present comprehensive and
-detailed foundations. Techniques based on DoE are parsimonious because
-they allow decreasing the number of measurements required to determine
-certain  relationships   between  parameters  and  metrics,   and  are
-transparent because each choice of parameter value can be justified by
-the results of statistical tests.
-
-In  DoE terminology,  a /design/  is a  plan for  executing a  series of
-measurements,  or   /experiments/,  whose   objective  is   to  identify
-relationships  between  /factors/  and  /responses/.   While  factors  and
-responses can refer  to different concrete entities  in other domains,
-in computer  experiments factors  can be configuration  parameters for
-algorithms  and  compilers, for  example,  and  responses can  be  the
-execution time or memory consumption of a program.
-
-Designs  can  serve  diverse   purposes,  from  identifying  the  most
-significant factors for performance, to fitting analytical performance
-models  for   the  response.   The   field  of  DoE   encompasses  the
-mathematical  formalization   of  the  construction   of  experimental
-designs.   More practical  works in  the field  present algorithms  to
-generate designs with different objectives and restrictions.
-
+* A Design of Experiments Methodology for Autotuning
 Our application of the DoE methodology requires support for factors of
 different types and  number of possible values, such  as binary flags,
 integer and floating point numerical values and unordered enumerations
-of abstract values.  We also need designs that minimize  the number of
+of abstract values.  We also need  designs that minimize the number of
 experiments  needed for  identifying the  most relevant  factors in  a
 given  problem, since  at  this moment  we are  not  interesting in  a
 precise analytical model.
@@ -223,43 +262,46 @@ plan, the  /D-Efficiency/ of a  design is inversely proportional  to the
 D-Optimal design has  the best D-Efficiency.  Our  current approach is
 based on D-Optimal designs.
 
-In  the first  part of  the  stay of  the student  in the  /Laboratoire
-d'Informatique de  Grenoble/ (LIG), we performed  a comprehensive study
-of the area of /Design of Experiments/ and developed an initial approach
-that applies  this knowledge to  the autotuning of  computer programs.
-We obtained promising results on  the autotuning of a Laplacian kernel
-for  GPUs  where  the  entire  search  space  was  available  and  the
-performance model was known.  We are now evaluating the performance of
+We obtained promising results with our approach on the autotuning of a
+Laplacian kernel for GPUs, where the entire search space was available
+and the performance model was  known.  Our approach consistently found
+optimizations within 1% of the global optimum, while using half of the
+allotted budget. We then performed  a more comprehensive evaluation of
 our        method        on         the        SPAPT        autotuning
 benchmark\nbsp{}\cite{balaprakash2012spapt},   which  contains   a  set   of
-parametrized  High-Performance  Computing   kernels  and  applications
-presenting large search  spaces and difficult search  problems. We are
-using  computational resources  from Grid5000  to run  experiments. We
-intend to submit  the results of the initial  promising application of
-our  approach and  of the  experiments using  SPAPT to  the 33rd  IEEE
-International Parallel & Distributed Processing Symposium (IPDPS).
-
-The rest of this document  is organized as follows. Section [[Objectives]]
-presents and discusses our  objectives.  Section [[Schedule]] presents the
-work plan and schedule. Annex\nbsp\ref{sec:CV}.
+parametrized HPC  kernels with large  and complex search  spaces. This
+work  was published\nbsp\cite{bruel2019autotuning}  at  the /2019  IEEE/ACM
+International Symposium in Cluster, Cloud,  and Grid Computing/, and is
+reproduced in Appendix\nbsp\ref{sec:CCGRID}.
 * Objectives
-An effective  autotuning strategy for  expensive-to-evaluate functions
-should be semi-automatic  and strongly build on  previous knowledge of
-FPGA compiling experts. We believe  techniques inspired from Design of
-Experiments  and from  the ``sequential  approach'' are  likely to  be
-effective in this context.
+We are  currently working on  improving our approach by  improving the
+designs produced at each step  and by leveraging more effectively user
+interaction and  knowledge.  We would  like to improve the  quality of
+the  designs produced  by our  approach, measured  by the  predictions
+derived from a performance model  obtained from a linear regression on
+experimental data, and by the D-Optimality criterion. We are achieving
+improvements in relation  with the standard approach,  and the ongoing
+work in this direction is presented in Appendix\nbsp\ref{sec:dopt}.
 
-We  are interested  in extending  this  approach to  FPGAs using  real
-applications  and  industry  partners  who   are  able  to  guide  the
-process. We  expect that  devising new  robust and  cheap experimental
-designs that enable mixing  binary, factorial and continuous variables
-will  present   an  interesting  challenge.   This   collaboration  is
-therefore an interesting  opportunity. The stay of 18  months of Pedro
-Henrique Rocha Bruel at  Communauté Université Grenoble Alpes (ComUGA)
-is collaborating in joining efforts and achieving progress.
+We  are  also   analyzing  the  results  from  our   recent  paper  on
+CCGRID\nbsp\cite{bruel2019autotuning},            reproduced            in
+Appendix\nbsp\ref{sec:CCGRID}, which were obtained by an automated version
+of approach. We  hope that these analyses will  help understanding the
+impact  that  direct  user  supervision   could  have  had  on  factor
+elimination  and design  construction.   Our objective  is to  perform
+non-automated  experiments  using  SPAPT   kernels,  to  showcase  the
+potential  of user-assisted  optimization.  The ongoing  work on  this
+direction is presented in Appendix\nbsp\ref{sec:analyseCCGRID}.
+
+It would also be valuable to this  thesis to revisit the case study on
+FPGAs, where  we would explore  the large search spaces  of industrial
+FPGA kernels, with strong constraints  on measurement time, since such
+kernels can  take up  to several  hours to  compile. This  study would
+provide an interesting scenario to test our DoE approach.
 * Schedule
-
+#+NAME: tab:sched
 #+ATTR_LATEX: :booktabs t :align llll
+#+CAPTION: Tentative schedule for research activities
 |------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | @@latex: \multirow{2}{*}{\textbf{Planned Research Activities}}@@ | @@latex: \multicolumn{3}{c}{\textbf{Periods}}@@                                                                                                             |
 |                                                                  | @@latex: \multicolumn{1}{c}{\footnotesize{04/19-08/19}} & \multicolumn{1}{c}{\footnotesize{09/19-01/20}} & \multicolumn{1}{c}{\footnotesize{02/20-05/20}}@@ |
@@ -268,7 +310,7 @@ is collaborating in joining efforts and achieving progress.
 | /User-Centric Optimization/                                        | @@latex: \multicolumn{2}{c}{\cellcolor[HTML]{ACACAC}} &@@                                                                                                   |
 | /Extended Paper/                                                   | @@latex: & \multicolumn{2}{c}{\cellcolor[HTML]{999999}}@@                                                                                                   |
 | /Case Study on FPGAs/                                              | @@latex: & \multicolumn{2}{c}{\cellcolor[HTML]{868686}}@@                                                                                                   |
-| /Thesis Writing/                                                 | @@latex: &  & \cellcolor[HTML]{737373}@@                                                                                                                    |
+| /Thesis Writing/                                                   | @@latex: &  & \cellcolor[HTML]{737373}@@                                                                                                                    |
 |------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------|
 
 #+begin_export latex
@@ -298,4 +340,14 @@ is collaborating in joining efforts and achieving progress.
 \label{sec:CCGRID}
 \lhead{\textbf{D. Publication at the CCGRID Conference}}
 \includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/ccgrid19.pdf}
+
+\fakesection{Comparing Sampling Strategies for Constructing D-Optimal Designs}
+\label{sec:dopt}
+\lhead{\textbf{E. Comparing Sampling Strategies for Constructing D-Optimal Designs}}
+\includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/dopt_sampling.pdf}
+
+\fakesection{Analysing Optimizations from the CCGRID Paper}
+\label{sec:analyseCCGRID}
+\lhead{\textbf{E. Analysing Optimizations from the CCGRID Paper}}
+\includepdf[pages={1},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/ccgrid19.pdf}
 #+END_EXPORT
