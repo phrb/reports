@@ -302,15 +302,15 @@ provide an interesting scenario to test our DoE approach.
 * Schedule
 Table\nbsp[[tab:sched]] presents a tentative schedule for the months until May
 2020, which is the predicted date  for the defense. The remaining time
-is  divided in  3 periods  of 5,  5 and  4 months.   We intend  to
-continue studying and improving our approach to autotuning in the next
-2 periods,  extending the work presented  in Appendixes\nbsp\ref{sec:dopt}
+is divided in 3  periods of 5, 5 and 4 months.   We intend to continue
+studying  and improving  our  approach  to autotuning  in  the next  2
+periods,  extending the  work  presented in  Appendixes\nbsp\ref{sec:dopt}
 and\nbsp\ref{sec:analyseCCGRID}.  These activities  are represented by the
 lines /Sampling for D-Optimal Designs/ and /User-Centered Optimization/ in
 Table\nbsp[[tab:sched]]. We  expect that the  studies and improvements  of our
 approach will allow extending the work done in our CCGRID paper, which
 we intend  to submit to  a journal.  We would  also like to  apply our
-approach  to the  FPGA  domain in  the  form of  a  case study.  These
+approach  to the  FPGA domain  in  the form  of a  case study.   These
 activities would take the last  2 periods. Finally, the thesis writing
 will take place during the last period.
 
