@@ -246,21 +246,22 @@ autotuning.
 
 * A Design of Experiments Methodology for Autotuning
 Our application of the DoE methodology requires support for factors of
-different types and  number of possible values, such  as binary flags,
-integer and floating point numerical values and unordered enumerations
-of abstract values.  We also need  designs that minimize the number of
-experiments  needed for  identifying the  most relevant  factors in  a
-given  problem, since  at  this moment  we are  not  interesting in  a
-precise analytical model.
+different types and  numbers of levels, such as  binary flags, integer
+and floating  point numerical  values and enumerations  of categorical
+values.  We also need designs  that minimize the number of experiments
+needed for identifying  the most relevant factors of  a problem, since
+at this moment we are not interested in a precise analytical model.
 
 The  design construction  techniques that  fit these  requirements are
 limited.   Considering flexibility  of application  and effectiveness,
 the  best  candidate we  have  found  so  far are  /D-Optimal/  designs.
-Considering that we are going to analyse the results of an experiments
-plan, the  /D-Efficiency/ of a  design is inversely proportional  to the
-/geometric mean/ of  the /eigenvalues/ of the plan's  /covariance matrix/. A
-D-Optimal design has  the best D-Efficiency.  Our  current approach is
-based on D-Optimal designs.
+Considering that  we are  going to  analyze the  response of  a design
+using  a linear  model  and ANOVA,  the /D-Efficiency/  of  a design  is
+inversely proportional to the /geometric mean/ of the /eigenvalues/ of the
+design's  /covariance   matrix/.   A  D-Optimal  design   has  the  best
+D-Efficiency, and our current approach  is based on D-Optimal designs.
+Appendix\nbsp\ref{sec:dopt}  presents  more  detailed description  of  the
+computation of the D-Optimality criterion.
 
 We obtained promising results with our approach on the autotuning of a
 Laplacian kernel for GPUs, where the entire search space was available
@@ -275,22 +276,22 @@ International Symposium in Cluster, Cloud,  and Grid Computing/, and is
 reproduced in Appendix\nbsp\ref{sec:CCGRID}.
 * Objectives
 We are  currently working on  improving our approach by  improving the
-designs produced at each step  and by leveraging more effectively user
-interaction and  knowledge.  We would  like to improve the  quality of
+designs produced at  each step and by leveraging  user interaction and
+knowledge more effectively .  We would  like to improve the quality of
 the  designs produced  by our  approach, measured  by the  predictions
 derived from a performance model  obtained from a linear regression on
 experimental data, and by the D-Optimality criterion. We are achieving
-improvements in relation  with the standard approach,  and the ongoing
+improvements in  relation to  the standard  approach, and  the ongoing
 work in this direction is presented in Appendix\nbsp\ref{sec:dopt}.
 
 We  are  also   analyzing  the  results  from  our   recent  paper  on
 CCGRID\nbsp\cite{bruel2019autotuning},            reproduced            in
 Appendix\nbsp\ref{sec:CCGRID}, which were obtained by an automated version
-of approach. We  hope that these analyses will  help understanding the
-impact  that  direct  user  supervision   could  have  had  on  factor
+of our approach.  We hope that these analyses  will help understanding
+the  impact that  direct user  supervision  could have  had on  factor
 elimination  and design  construction.   Our objective  is to  perform
 non-automated  experiments  using  SPAPT   kernels,  to  showcase  the
-potential  of user-assisted  optimization.  The ongoing  work on  this
+potential  of user-assisted  optimization.  The  ongoing work  on this
 direction is presented in Appendix\nbsp\ref{sec:analyseCCGRID}.
 
 It would also be valuable to this  thesis to revisit the case study on
@@ -299,6 +300,20 @@ FPGA kernels, with strong constraints  on measurement time, since such
 kernels can  take up  to several  hours to  compile. This  study would
 provide an interesting scenario to test our DoE approach.
 * Schedule
+Table\nbsp[[tab:sched]] presents a tentative schedule for the months until May
+2020, which is the predicted date  for the defense. The remaining time
+is  divided in  3 periods  of 5,  5 and  4 months.   We intend  to
+continue studying and improving our approach to autotuning in the next
+2 periods,  extending the work presented  in Appendixes\nbsp\ref{sec:dopt}
+and\nbsp\ref{sec:analyseCCGRID}.  These activities  are represented by the
+lines /Sampling for D-Optimal Designs/ and /User-Centered Optimization/ in
+Table\nbsp[[tab:sched]]. We  expect that the  studies and improvements  of our
+approach will allow extending the work done in our CCGRID paper, which
+we intend  to submit to  a journal.  We would  also like to  apply our
+approach  to the  FPGA  domain in  the  form of  a  case study.  These
+activities would take the last  2 periods. Finally, the thesis writing
+will take place during the last period.
+
 #+NAME: tab:sched
 #+ATTR_LATEX: :booktabs t :align llll
 #+CAPTION: Tentative schedule for research activities
@@ -307,7 +322,7 @@ provide an interesting scenario to test our DoE approach.
 |                                                                  | @@latex: \multicolumn{1}{c}{\footnotesize{04/19-08/19}} & \multicolumn{1}{c}{\footnotesize{09/19-01/20}} & \multicolumn{1}{c}{\footnotesize{02/20-05/20}}@@ |
 |------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | /Sampling for D-Optimal Designs/                                   | @@latex: \multicolumn{2}{c}{\cellcolor[HTML]{C0C0C0}} &@@                                                                                                   |
-| /User-Centric Optimization/                                        | @@latex: \multicolumn{2}{c}{\cellcolor[HTML]{ACACAC}} &@@                                                                                                   |
+| /User-Centered Optimization/                                       | @@latex: \multicolumn{2}{c}{\cellcolor[HTML]{ACACAC}} &@@                                                                                                   |
 | /Extended Paper/                                                   | @@latex: & \multicolumn{2}{c}{\cellcolor[HTML]{999999}}@@                                                                                                   |
 | /Case Study on FPGAs/                                              | @@latex: & \multicolumn{2}{c}{\cellcolor[HTML]{868686}}@@                                                                                                   |
 | /Thesis Writing/                                                   | @@latex: &  & \cellcolor[HTML]{737373}@@                                                                                                                    |
@@ -349,5 +364,5 @@ provide an interesting scenario to test our DoE approach.
 \fakesection{Analysing Optimizations from the CCGRID Paper}
 \label{sec:analyseCCGRID}
 \lhead{\textbf{E. Analysing Optimizations from the CCGRID Paper}}
-\includepdf[pages={1},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/ccgrid19.pdf}
+\includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/analysing_ccgrid19.pdf}
 #+END_EXPORT
