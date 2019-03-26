@@ -50,6 +50,12 @@ Ronald~Aylmer Fisher.
 \newblock {\em The design of experiments}.
 \newblock Oliver And Boyd; Edinburgh; London, 1937.
 
+\bibitem{gromping2014frf2}
+Ulrike Grömping.
+\newblock {R} package {FrF2} for creating and analyzing fractional factorial
+  2-level designs.
+\newblock {\em Journal of Statistical Software}, 56(1):1--56, 2014.
+
 \bibitem{ulrike2018algorithm}
 Ulrike Grömping and Roberto Fontana.
 \newblock An algorithm for generating good mixed level factorial designs.
@@ -59,6 +65,16 @@ Ulrike Grömping and Roberto Fontana.
 Douglas~C Montgomery.
 \newblock {\em Design and analysis of experiments}.
 \newblock John wiley \& sons, 2017.
+
+\bibitem{plackett1946design}
+Robin~L Plackett and J~Peter Burman.
+\newblock The design of optimum multifactorial experiments.
+\newblock {\em Biometrika}, 33(4):305--325, 1946.
+
+\bibitem{team2018rlanguage}
+{R Core Team}.
+\newblock {\em R: A Language and Environment for Statistical Computing}.
+\newblock R Foundation for Statistical Computing, Vienna, Austria, 2018.
 
 \bibitem{seymour2008comparison}
 Keith Seymour, Haihang You, and Jack Dongarra.
