@@ -50,6 +50,11 @@ Ronald~Aylmer Fisher.
 \newblock {\em The design of experiments}.
 \newblock Oliver And Boyd; Edinburgh; London, 1937.
 
+\bibitem{ulrike2018algorithm}
+Ulrike Grömping and Roberto Fontana.
+\newblock An algorithm for generating good mixed level factorial designs.
+\newblock Technical report, Beuth University of Applied Sciences, Berlin, 2018.
+
 \bibitem{montgomery2017design}
 Douglas~C Montgomery.
 \newblock {\em Design and analysis of experiments}.

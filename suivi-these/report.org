@@ -5,7 +5,7 @@
 #+TITLE: Autotuning under Tight Budget Constraints:
 #+TITLE: @@latex: \\@@
 #+TITLE: A Transparent Design of Experiments Approach
-#+AUTHOR: Pedro Bruel, Arnaud Legrand
+#+AUTHOR: Pedro Bruel
 #+LANGUAGE:    en
 #+TAGS: noexport(n) Stats(S)
 #+TAGS: Teaching(T) R(R) OrgMode(O) Python(P)
@@ -87,232 +87,588 @@
 #+LATEX_HEADER: }
 
 #+LATEX: \clearpage
+* Generating Figures                                               :noexport:
+** Representing Sampling Strategies
+*** Generate Data
+#+HEADER: :results output :session *R* :eval no-export
+#+BEGIN_SRC R
+library(ggplot2)
+library(DoE.wrapper)
+library(AlgDesign)
+library(dplyr)
+library(RColorBrewer)
+
+sample_size <- 50
+pre_sample_size <- 30 * sample_size
+search_space_size <- 100
+
+center_x1 <- (search_space_size / 2) - 30
+center_x2 <- (search_space_size / 2) - 30
+
+get_cost <- function(data) {
+    return(((data$x1 - center_x1) ^ 2) + ((data$x2 - center_x2) ^ 2) + ((abs((data$x1 - center_x1) * (data$x2 - center_x2)))**.7 * sin((data$x1 - center_x1) * (data$x2 - center_x2))))
+}
+
+objective_data <- expand.grid(seq(0, search_space_size, 1),
+                              seq(0, search_space_size, 1))
+names(objective_data) <- c("x1", "x2")
+
+objective_data$Y <- get_cost(objective_data)
+
+rs_data <- data.frame(x1 = sample(0:search_space_size, sample_size, replace = T),
+                      x2 = sample(0:search_space_size, sample_size, replace = T))
+rs_data$name <- rep("Random Sampling", nrow(rs_data))
+
+rs_data$cost <- get_cost(rs_data)
+rs_data$min <- rs_data$cost == min(rs_data$cost)
+
+data <- rs_data
+
+lhs_data <- lhs.design(nruns = sample_size, nfactors = 2, digits = 0, type = "maximin",
+                       factor.names = list(x1 = c(0, search_space_size), x2 = c(0, search_space_size)))
+lhs_data$name <- rep("Latin Hypercube Sampling", nrow(lhs_data))
+
+lhs_data$cost <- get_cost(lhs_data)
+lhs_data$min <- lhs_data$cost == min(lhs_data$cost)
+
+data <- bind_rows(data, lhs_data)
+
+full_factorial <- gen.factorial(c(search_space_size, search_space_size), center = FALSE)
+names(full_factorial) <- c("x1", "x2")
+output <- optFederov(~ x1 + x2, full_factorial, nTrials = sample_size)
+dopt_data <- output$design
+
+dopt_data$name <- rep("D-Optimal with Linear Model", nrow(dopt_data))
+dopt_data$cost <- get_cost(dopt_data)
+dopt_data$min <- rep(FALSE, nrow(dopt_data))
+
+regression <- lm(cost ~ x1 + x2, data = dopt_data)
+prediction <- predict(regression, newdata = full_factorial)
+best <- full_factorial[prediction == min(prediction), ]
+
+best$cost <- min(prediction)
+best$name <- "D-Optimal with Linear Model"
+best$min <- TRUE
+
+dopt_data <- bind_rows(dopt_data, best)
+data <- bind_rows(data, dopt_data)
+
+full_factorial <- gen.factorial(c(search_space_size, search_space_size), center = FALSE)
+names(full_factorial) <- c("x1", "x2")
+output <- optFederov(~ x1 + x2 + I(x1 ^ 2) + I(x2 ^ 2), full_factorial, nTrials = sample_size)
+doptq_data <- output$design
+
+doptq_data$name <- rep("D-Optimal with Quadratic Model", nrow(doptq_data))
+doptq_data$cost <- get_cost(doptq_data)
+doptq_data$min <- rep(FALSE, nrow(doptq_data))
+
+regression <- lm(cost ~ x1 + x2 + I(x1 ^ 2) + I(x2 ^ 2), data = doptq_data)
+prediction <- predict(regression, newdata = full_factorial)
+best <- full_factorial[prediction == min(prediction), ]
+
+best$cost <- min(prediction)
+best$name <- "D-Optimal with Quadratic Model"
+best$min <- TRUE
+
+doptq_data <- bind_rows(doptq_data, best)
+data <- bind_rows(data, doptq_data)
+#+END_SRC
+
+#+RESULTS:
+
+*** Plot
+#+HEADER: :results graphics output :session *R*
+#+HEADER: :file ../../img/report_sampling_comparison.pdf :exports none :width 30 :height 9 :eval no-export
+#+BEGIN_SRC R
+library(extrafont)
+data$facet <- factor(data$name, levels = c("Random Sampling", "Latin Hypercube Sampling", "D-Optimal with Linear Model", "D-Optimal with Quadratic Model"))
+ggplot(data, aes(x = x1, y = x2)) +
+    facet_wrap(facet ~ ., ncol = 4) +
+    scale_x_continuous(limits = c(0, 101), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(0, 101), expand = c(0, 0)) +
+    xlab("x") +
+    ylab("y") +
+    geom_contour(data = objective_data, aes(z = Y), linetype = 1, colour = "black", alpha = 0.6, show.legend = FALSE, breaks = 1 * (2 ^ (4:20))) +
+    geom_point(shape = 19, size = 3, colour = "black", alpha = 0.55) +
+    scale_fill_distiller(palette = "Greys", direction = -1, limits = c(min(objective_data$Y) - 1000, max(objective_data$Y))) +
+    geom_point(data = subset(data, min == TRUE), color = "red", shape = 3, size = 12, alpha = 1, stroke = 2) +
+    theme_bw(base_size = 44) +
+    theme(panel.grid = element_blank(),
+          text = element_text(family="serif"),
+          strip.background = element_rect(fill = "white"),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+#+END_SRC
+
+#+RESULTS:
+[[file:../../img/report_sampling_comparison.pdf]]
+
+** SPAPT
+*** Cloning/Pulling the Repository
+#+HEADER: :results output :eval no-export
+#+BEGIN_SRC shell
+git clone https://github.com/phrb/dlmt_spapt_experiments.git || (cd dlmt_spapt_experiments && git pull)
+#+END_SRC
+
+#+RESULTS:
+: Already up to date.
+*** Histograms and Iterations Plots
+**** Loading Data
+#+HEADER: :results output :session *R* :eval no-export
+#+BEGIN_SRC R
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(reshape2)
+library(openssl)
+library(RColorBrewer)
+library(extrafont)
+
+data_dir <- "dlmt_spapt_experiments/data/results"
+target_dirs <- list.dirs(path = data_dir, full.names = FALSE, recursive = FALSE)
+data <- NULL
+
+read.csv.iterations.cost <- function(csv_file) {
+    data <- read.csv(csv_file, header = TRUE)
+
+    data$experiment_id <- rep(sha1(csv_file), nrow(data))
+    data_baseline <- data[data$baseline == "True", "cost_mean"]
+    data$cost_baseline <- rep(data_baseline, nrow(data))
+    data$speedup <- data_baseline / data$cost_mean
+    data$max_run_speedup <- rep(max(data$speedup), nrow(data))
+    data$min_run_cost <- rep(min(data$cost_mean), nrow(data))
+
+    data <- data[data$baseline == "False", ]
+    data <- data[data$correct_result == "True", ]
+
+    data$best_iteration <- rep(as.numeric(rownames(data[data$speedup == max(data$speedup), ])), nrow(data))
+    data$points <- rep(nrow(data), nrow(data))
+
+    return(data)
+}
+
+for (target_dir in target_dirs) {
+    target_path <- paste(data_dir, "/", target_dir, "/", sep = "")
+
+    csv_files <- list.files(path = target_path, pattern = "search_space.csv", recursive = TRUE)
+    if (length(csv_files) != 0) {
+        csv_files <- paste0(target_path, csv_files)
+
+        info <- file.info(csv_files)
+        non_empty <- rownames(info[info$size != 0, ])
+        csv_files <- csv_files[csv_files %in% non_empty]
+        target_data <- lapply(csv_files, read.csv.iterations.cost)
+        target_data <- bind_rows(target_data)
+        target_data <- target_data[, c("cost_mean", "experiment_id", "technique", "cost_baseline", "min_run_cost", "best_iteration")]
+        target_data$application <- rep(target_dir, nrow(target_data))
+
+        if (is.null(data)) {
+            data <- target_data
+        } else {
+            data <- bind_rows(data, target_data)
+        }
+    }
+}
+
+plot_data <- data %>%
+             distinct(experiment_id, .keep_all = TRUE) %>%
+             group_by(application) %>%
+             mutate(mean_cost_baseline = mean(cost_baseline)) %>%
+             ungroup()
+
+plot_data <- plot_data %>%
+             distinct(experiment_id, .keep_all = TRUE) %>%
+             group_by(application, technique) %>%
+             mutate(label_center_x = mean(cost_mean)) %>%
+             mutate(label_center_y = mean(best_iteration)) %>%
+             ungroup()
+
+complete_plot_data <- plot_data
+#+END_SRC
+
+#+RESULTS:
+:
+: There were 50 or more warnings (use warnings() to see the first 50)
+**** Iterations where best was found
+#+HEADER: :results graphics output :session *R* :exports none :eval no-export
+#+HEADER: :file ../../img/report_iteration_best_comparison.pdf
+#+HEADER: :width 14 :height 9
+#+BEGIN_SRC R
+library(grid)
+library(gtable)
+library(ggrepel)
+library(utf8)
+
+it_data <- complete_plot_data
+
+it_data <- it_data %>% subset(application %in% c("bicgkernel", "mm", "tensor", "gesummv",
+                                                 "lu", "mvt", "seidel", "jacobi"))
+it_data$facet <- factor(it_data$application, levels = c("bicgkernel", "mm", "tensor", "gesummv",
+                                                        "lu", "mvt", "seidel", "jacobi"))
+
+it_data$header <- rep(NA, nrow(it_data))
+
+it_data[it_data$facet %in% c("bicgkernel", "mm", "tensor", "gesummv", "lu", "mvt", "seidel", "jacobi"), "header"] <- "C"
+
+it_data$header <- factor(it_data$header, levels = c("C"))
+
+levels(it_data$facet) <- c("[+] bicgkernel", "[+] mm", "[+] tensor", "[+] gesummv",
+                           "[+] lu", "[+] mvt", "[+] seidel", "[+] jacobi")
+
+p1 <- ggplot(it_data, aes(min_run_cost, best_iteration, color = technique)) +
+    facet_wrap(facet ~ ., ncol = 4) +
+    geom_point(size = 2, pch = 19) +
+    stat_ellipse(type = "t", linetype = 13) +
+    #geom_label_repel(data = . %>% group_by(application) %>%
+    #                              filter(technique == "RS") %>%
+    #                              filter(best_iteration == min(best_iteration)),
+    #                 aes(label = technique, x = label_center_x, y = label_center_y), show.legend = FALSE) +
+    geom_vline(aes(xintercept = mean_cost_baseline, size = "-O3"), linetype = 8, color = "black") +
+    scale_x_log10(labels = scales::trans_format("log10", scales::math_format(10^.x))) +
+    scale_y_continuous(limits = c(-10, 400), breaks = c(0, 200, 400)) +
+    scale_size_manual("", values = 0.45) +
+    annotation_logticks(sides = "b") +
+    ggtitle("") +
+    ylab("Iteration where Best was Found") +
+    xlab("Best Cost in Seconds") +
+    guides(color = guide_legend(reverse = TRUE)) +
+    theme_bw(base_size = 24) +
+    theme(legend.position = "bottom",
+          legend.direction = "horizontal",
+          legend.title = element_blank(),
+          text = element_text(family = "serif"),
+          strip.background = element_rect(fill = "white"),
+          plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"))  +
+    #scale_color_brewer(palette = "Set1")
+    scale_color_grey(start = 0.3, end = 0.7)
+
+dummy <- ggplot(data = it_data, aes(x = min_run_cost, y = best_iteration)) +
+                facet_wrap(facet ~ ., scale = "free", ncol = 4) +
+                geom_rect(aes(fill = header), xmin = -Inf, xmax = Inf,
+                                              ymin = -Inf, ymax = Inf) +
+                theme_minimal(base_size = 24) +
+                theme(text = element_text(family = "serif"),
+                      legend.position = "bottom",
+                      legend.direction = "horizontal",
+                      legend.title = element_blank(),
+                      plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm")
+                      )  +
+                scale_fill_brewer(palette = "Pastel2", direction = -1)
+                #scale_fill_grey()
+
+g1 <- ggplotGrob(p1)
+g2 <- ggplotGrob(dummy)
+
+gtable_select <- function (x, ...)
+{
+  matches <- c(...)
+  x$layout <- x$layout[matches, , drop = FALSE]
+  x$grobs <- x$grobs[matches]
+  x
+}
+
+panels <- grepl(pattern = "panel", g2$layout$name)
+strips <- grepl(pattern = "strip-t", g2$layout$name)
+g2$layout$t[panels] <- g2$layout$t[panels] - 1
+g2$layout$b[panels] <- g2$layout$b[panels] - 1
+
+new_strips <- gtable_select(g2, panels | strips)
+#grid.newpage()
+grid.draw(new_strips)
+
+gtable_stack <- function(g1, g2){
+  g1$grobs <- c(g1$grobs, g2$grobs)
+  g1$layout <- transform(g1$layout, z = z - max(z), name = "g2")
+  g1$layout <- rbind(g1$layout, g2$layout)
+  g1
+}
+
+new_plot <- gtable_stack(g1, new_strips)
+#grid.newpage()
+grid.draw(new_plot)
+#+END_SRC
+
+#+RESULTS:
+[[file:../../img/report_iteration_best_comparison.pdf]]
 * Introduction
-The use of heterogeneous programming models and computer architectures
-in  High-Performance   Computing  (HPC)  has  increased   despite  the
-difficulty  of   optimizing  and  configuring  legacy   code,  and  of
-developing new solutions for heterogeneous computing. Due to the great
-diversity of programming models and  architectures, there is no single
-optimization strategy that fits all problems and architectures.
+The  use  of heterogeneous  programming  models  and computer  architectures  in
+High-Performance  Computing  (HPC)  has  increased  despite  the  difficulty  of
+optimizing  and configuring  legacy code,  and of  developing new  solutions for
+heterogeneous computing.  Due to the  great diversity of programming  models and
+architectures, there is  no single optimization strategy that  fits all problems
+and architectures.
 
-An optimization solution tailored for a specific problem requires time
-and expert knowledge.   Using general optimizations can  be faster and
-cheaper,  often  at  the   cost  of  application-specific  performance
-improvements. A possible solution to  this trade-off is the automation
-of the program optimization process.
+An  optimization solution  tailored for  a  specific problem  requires time  and
+expert knowledge.  Using general optimizations  can be faster and cheaper, often
+at  the  cost  of  application-specific  performance  improvements.  A  possible
+solution  to  this trade-off  is  the  automation  of the  program  optimization
+process.
 
-The automated  selection of algorithms and  configuration of programs,
-or  /autotuning/, casts  the program  optimization problem  as a  search
-problem. The  possible configurations  and optimizations of  a program
-are  used to  compose  a  /search space/,  and  search  is performed  by
-evaluating the  impact of each  configuration on the  initial program.
-Using the increasingly available  computing power to measure different
-versions  of a  program, an  /autotuner/ searches  for good  selections,
-configurations, and  optimizations. Each measurement provides  a value
-for a meaningful program metric, such  as execution time and memory or
-power consumption.
+The  automated  selection  of  algorithms  and  configuration  of  programs,  or
+/autotuning/,  casts the  program optimization  problem as  a search  problem. The
+possible configurations  and optimizations of  a program  are used to  compose a
+/search  space/,  and  search  is  performed by  evaluating  the  impact  of  each
+configuration  on  the  initial   program.   Using  the  increasingly  available
+computing  power  to measure  different  versions  of  a program,  an  /autotuner/
+searches   for  good   selections,  configurations,   and  optimizations.   Each
+measurement provides a value for a  meaningful program metric, such as execution
+time and memory or power consumption.
 
-From the  implementation in a  high-level programming language  to the
-instruction selection  in code  generation, it  is possible  to expose
-optimization  and configuration  opportunities  in  various stages  of
-program development and execution.  The time to measure the results of
-an optimization choice depends on the selected stage and on the metric
-to be  optimized.  Certain stages  are more  costly to measure  and to
-optimize, because  the access  to special hardware  can be  costly and
-constrained, and measurements may take a long time.
+From the implementation in a  high-level programming language to the instruction
+selection  in  code  generation,  it  is possible  to  expose  optimization  and
+configuration  opportunities  in  various  stages  of  program  development  and
+execution.  The time to measure the results of an optimization choice depends on
+the selected stage and  on the metric to be optimized.   Certain stages are more
+costly to measure and to optimize, because the access to special hardware can be
+costly and constrained, and measurements may take a long time.
 
-Search algorithms based on machine  learning or heuristics are not the
-best candidates for autotuning  domains where measurements are lengthy
-and costly, such as  compiling industrial-level FPGA programs, because
-these  algorithms  rely on  the  availability  of  a large  number  of
-measurements. They also assume good optimizations are reachable from a
-starting position, and that tendencies  observed locally in the search
-space  are exploitable.   These assumptions  are not  usually true  in
-common  autotuning  domains,  as  shown  in the  work  of  Seymour  /et
+Search  algorithms  based  on  machine  learning heuristics  are  not  the  best
+candidates for  autotuning domains  where measurements  are lengthy  and costly,
+such as compiling industrial-level FPGA  programs, because these algorithms rely
+on the  availability of a  large number of  measurements. They also  assume good
+optimizations  are  reachable from  a  starting  position, and  that  tendencies
+observed locally in the search space are exploitable.  These assumptions are not
+usually true in  common autotuning domains, as  shown in the work  of Seymour /et
 al./\nbsp\cite{seymour2008comparison}.
 
-Autotuning search spaces also  usually have non-linear constraints and
-undefined   regions,  which   are  also   expected  to   decrease  the
-effectiveness of search  based on heuristics and  machine learning. An
-additional downside  to heuristics- and machine  learning-based search
-is  that,  usually,  optimization  choices cannot  be  explained,  and
-knowledge  gained  during  optimization  is not  reusable.   The  main
-objective of this  thesis is to study how to  overcome the reliance on
-these assumptions  about search  spaces, and  the lack  of explainable
-optimizations, from the point of view of a Design of Experiments (DoE)
-methodology to autotuning.
+Autotuning search spaces also usually  have non-linear constraints and undefined
+regions, which are  also expected to decrease the effectiveness  of search based
+on heuristics  and machine learning.  An additional downside to  heuristics- and
+machine learning-based search  is that, usually, optimization  choices cannot be
+explained, and knowledge  gained during optimization is not  reusable.  The main
+objective of  this thesis  is to  study how  to overcome  the reliance  on these
+assumptions about search spaces, and the lack of explainable optimizations, from
+the point of view of a Design of Experiments (DoE) methodology to autotuning.
 
-One of the  first detailed descriptions and  mathematical treatment of
-DoE was presented by Ronald Fisher\nbsp\cite{fisher1937design} in his 1937
-book  /The Design  of  Experiments/, where  he  discussed principles  of
-experimentation, latin  square sampling and factorial  designs.  Later
-books    such    as    the    ones    from    Jain\nbsp\cite{bukh1992art},
-Montgomery\nbsp\cite{montgomery2017design}        and        Box        /et
-al./\nbsp\cite{box2005statistics}  present  comprehensive and  detailed
-foundations.  Techniques  based on  DoE are /parsimonious/  because they
-allow  decreasing the  number  of measurements  required to  determine
-certain  relationships   between  parameters  and  metrics,   and  are
-/transparent/ because each choice of parameter value can be justified by
-the results of statistical tests.
+One of  the first detailed  descriptions and  mathematical treatment of  DoE was
+presented by Ronald  Fisher\nbsp\cite{fisher1937design} in his 1937  book /The Design
+of Experiments/, where  he discussed principles of  experimentation, latin square
+sampling  and   factorial  designs.    Later  books  such   as  the   ones  from
+Jain\nbsp\cite{bukh1992art},   Montgomery\nbsp\cite{montgomery2017design}  and   Box  /et
+al./\nbsp\cite{box2005statistics} present comprehensive and detailed foundations.
+Techniques  based on  DoE are  /parsimonious/  because they  allow decreasing  the
+number  of  measurements required  to  determine  certain relationships  between
+parameters and  metrics, and  are /transparent/ because  each choice  of parameter
+value can be justified by the results of statistical tests.
 
-In  DoE terminology,  a /design/  is a  plan for  executing a  series of
-measurements,  or   /experiments/,  whose   objective  is   to  identify
-relationships  between  /factors/  and  /responses/.   While  factors  and
-responses can refer  to different concrete entities  in other domains,
-in computer  experiments factors  can be configuration  parameters for
-algorithms  and  compilers, for  example,  and  responses can  be  the
+In DoE terminology, a  /design/ is a plan for executing  a series of measurements,
+or /experiments/, whose objective is to identify relationships between /factors/ and
+/responses/.  While factors and responses can refer to different concrete entities
+in  other  domains,  in  computer   experiments  factors  can  be  configuration
+parameters for algorithms  and compilers, for example, and responses  can be the
 execution time or memory consumption of a program.
 
-Designs  can  serve  diverse   purposes,  from  identifying  the  most
-significant factors for performance, to fitting analytical performance
-models  for   the  response.   The   field  of  DoE   encompasses  the
-mathematical  formalization   of  the  construction   of  experimental
-designs.   More practical  works in  the field  present algorithms  to
-generate designs with different objectives and restrictions.
+Designs  can  serve diverse  purposes,  from  identifying the  most  significant
+factors  for  performance, to  fitting  analytical  performance models  for  the
+response.  The  field of DoE  encompasses the mathematical formalization  of the
+construction of experimental designs.  More practical works in the field present
+algorithms to generate designs with different objectives and restrictions.
 
-This document presents a mid-term  report of the work performed during
-this thesis.  The  work started in 2015, advised  by Professor Alfredo
-Goldman, in the Computer Science PhD  program of the University of São
-Paulo, Brazil, which lasts 5 years.  The student started its /cotutelle/
-thesis  at  the University  of  Grenoble  Alpes  in 2017,  advised  by
-Professor Arnaud  Legrand, and the  predicted date for the  defense is
-May 2020. This document  is organized as follows.  Sections\nbsp[[Autotuning
-with  Search Heuristics]]  and\nbsp[[A Design  of Experiments  Methodology for
-Autotuning]] describe succinctly the work done applying heuristics-based
-search  algorithms   on  compiler  parameters  for   GPUs  and  FPGAs,
-respectively.  Section\nbsp[[Objectives]]  discusses  our current  pursuit  to
-refine our methodology for autotuning and include the user more in the
-optimization process.  Section\nbsp[[Schedule]]  presents a tentative schedule
-for future work. Appendix\nbsp\ref{sec:CV}  presents the student's /CV/, and
-Appendices\nbsp\ref{sec:CCPE},    \ref{sec:reconfig},    \ref{sec:CCGRID},
-\ref{sec:dopt} and\nbsp\ref{sec:analyseCCGRID}  present extensive material
-that has been published or already written.
+This  document presents  a mid-term  report of  the work  performed during  this
+thesis.  The work started in 2015,  advised by Professor Alfredo Goldman, in the
+Computer Science PhD program of the University of São Paulo, Brazil, which lasts
+5 years.  The student started its /cotutelle/ thesis at the University of Grenoble
+Alpes in 2017,  advised by Professor Arnaud Legrand, and  the predicted date for
+the   defense  is   May  2020.    This   document  is   organized  as   follows.
+Sections\nbsp[[Autotuning  with   Search  Heuristics]]   and\nbsp[[A  Design   of  Experiments
+Methodology  for   Autotuning]]  describe   succinctly  the  work   done  applying
+heuristics-based search  algorithms on compiler  parameters for GPUs  and FPGAs,
+respectively.  Section\nbsp[[Objectives]]  discusses our  current pursuit to  refine our
+methodology  for  autotuning and  include  the  user  more in  the  optimization
+process.   Section\nbsp[[Schedule]]  presents  a  tentative schedule  for  future  work.
+Appendix\nbsp\ref{sec:CV} presents the  student's /CV/, and Appendix\nbsp\ref{sec:courses}
+lists    the     UGA    courses,    or    /formations/,     followed    so    far.
+Appendices\nbsp\ref{sec:CCPE}, \ref{sec:reconfig},  \ref{sec:CCGRID}, \ref{sec:dopt}
+and\nbsp\ref{sec:analyseCCGRID}  reproduce  material  that has  been  published  and
+present material already written for ongoing research.
 
 * Autotuning with Search Heuristics
-We  initially  studied in  this  thesis  the effectiveness  of  search
-heuristics, such  as simulated annealing, on  autotuning problems. Our
-first target autotuning domain was the set of parameters of a compiler
-for  GPU programs.   The search  heuristics for  this case  study were
-implemented  using the  OpenTuner framework\nbsp\cite{ansel2014opentuner},
-and consisted  of an  ensemble of search  heuristics coordinated  by a
-Multi-Armed Bandit  algorithm.  The  autotuner searched  for a  set of
-compilation parameters  that optimized  17 heterogeneous  GPU kernels,
-from  a  set of  approximately  $10^{23}$  possible combinations  of  all
-parameters.  With  1.5h autotuning  runs we have  achieved up  to $4\times$
-speedup   in   comparison   with  the   CUDA   compiler's   high-level
-optimizations.   The compilation  and execution  times of  programs in
-this autotuning domain are relatively fast, and were in the order of a
-few  seconds to  a  minute.  Since  measurement  costs are  relatively
-small, search heuristics  could find good optimizations  using as many
-measurements  as  needed.  A  detailed  description  of this  work  is
-available  in our  paper\nbsp\cite{bruel2017autotuning}  published in  the
-/Concurrency and Computation: Practice and Experience/ journal, which is
-reproduced in Appendix\nbsp\ref{sec:CCPE}.
+We initially studied in this thesis  the effectiveness of classical and standard
+search  heuristics, such  as simulated  annealing, on  autotuning problems.  Our
+first target autotuning domain  was the set of parameters of  a compiler for GPU
+programs.  The search heuristics for this  case study were implemented using the
+OpenTuner framework\nbsp\cite{ansel2014opentuner},  and consisted of an  ensemble of
+search heuristics coordinated by a  Multi-Armed Bandit algorithm.  The autotuner
+searched for a set of compilation parameters that optimized 17 heterogeneous GPU
+kernels,  from  a set  of  approximately  $10^{23}$  possible combinations  of  all
+parameters.  With  1.5h autotuning runs we  have achieved up to  $4\times$ speedup in
+comparison with  the CUDA compiler's high-level  optimizations.  The compilation
+and execution times  of programs in this autotuning domain  are relatively fast,
+and were in the order of a few seconds to a minute.  Since measurement costs are
+relatively small, search heuristics could  find good optimizations using as many
+measurements as needed.  A detailed description of this work is available in our
+paper\nbsp\cite{bruel2017autotuning} published  in the /Concurrency  and Computation:
+Practice and Experience/ journal, which is reproduced in Appendix\nbsp\ref{sec:CCPE}.
 
-The   next   case   study   was  developed   in   collaboration   with
-/Hewlett-Packard  Enterprise/,  and  consisted   of  applying  the  same
-heuristics-based   autotuning  approach   to   the  configuration   of
-parameters involved  in the generation of  FPGA hardware specification
-from  source code  in  the  C language,  a  process called  /High-Level
-Synthesis/ (HLS).  The main difference  from our work with GPU compiler
-parameters was  the time to  obtain the hardware  specification, which
-could be in the order of hours for a single kernel.
+The  next  case  study  was  developed  in  collaboration  with  /Hewlett-Packard
+Enterprise/,  and  consisted of  applying  the  same heuristics-based  autotuning
+approach to the  configuration of parameters involved in the  generation of FPGA
+hardware specification  from source  code in  the C  language, a  process called
+/High-Level Synthesis/ (HLS).  The main difference from our work with GPU compiler
+parameters was the time to obtain  the hardware specification, which could be in
+the order of hours for a single kernel.
 
-In this more complex scenario, we achieved up to $2\times$ improvements for
-different  hardware  metrics  using  conventional  search  algorithms.
-These  results were  obtained in  a  simple HLS  benchmark, for  which
-compilation times were  in the order of minutes. The  search space was
-composed of  approximately $10^{123}$  possible configurations,  which is
-much  larger  than  the  search   space  in  our  previous  work  with
-GPUs. Search space size and the  larger measurement cost meant that we
-did  not  expect  the  heuristics-based  approach  to  have  the  same
-effectiveness  as  in the  GPU  compiler  case  study. This  work  was
-published\nbsp\cite{bruel2017autotuninghls} at the 2017 /IEEE International
-Conference on ReConFigurable Computing and FPGAs/, and is reproduced in
+In this more complex scenario, we achieved up to $2\times$ improvements for different
+hardware  metrics  using conventional  search  algorithms.   These results  were
+obtained in  a simple  HLS benchmark,  for which compilation  times were  in the
+order  of  minutes. The  search  space  was  composed of  approximately  $10^{123}$
+possible  configurations, which  is much  larger than  the search  space in  our
+previous work with GPUs. Search space size and the larger measurement cost meant
+that  we  did  not  expect  the  heuristics-based  approach  to  have  the  same
+effectiveness   as   in  the   GPU   compiler   case   study.  This   work   was
+published\nbsp\cite{bruel2017autotuninghls}   at   the   2017   /IEEE   International
+Conference  on  ReConFigurable  Computing  and   FPGAs/,  and  is  reproduced  in
 Appendix\nbsp\ref{sec:reconfig}.
 
-Approaches   using  classical   machine   learning  and   optimization
-techniques  would  not  scale  to  industrial-level  HLS,  where  each
-compilation can take hours to  complete.  Search space properties also
-increase the  complexity of the  problem, in particular  its structure
-composed   of  binary,   factorial  and   continuous  variables   with
-potentially complex  interactions.  Our results on  autotuning HLS for
-FPGAs  corroborate the  conclusion  that the  empirical autotuning  of
-expensive-to-evaluate  functions, such  as  those that  appear on  the
-autotuning  of  HLS,  require  a  more  parsimonious  and  transparent
-approach, that can potentially be  achieved using the DoE methodology.
-The next section describes our work on applying the DoE methodology to
-autotuning.
+Approaches using  classical machine  learning and optimization  techniques would
+not scale  to industrial-level  HLS, where  each compilation  can take  hours to
+complete.  Search space properties also  increase the complexity of the problem,
+in  particular  its  structure  composed of  binary,  factorial  and  continuous
+variables with potentially complex interactions.   Our results on autotuning HLS
+for  FPGAs  corroborate   the  conclusion  that  the   empirical  autotuning  of
+expensive-to-evaluate functions, such as those  that appear on the autotuning of
+HLS, require a more parsimonious  and transparent approach, that can potentially
+be achieved using  the DoE methodology.  The next section  describes our work on
+applying the DoE methodology to autotuning.
 
 * A Design of Experiments Methodology for Autotuning
-Our application of the DoE methodology requires support for factors of
-different types and  numbers of levels, such as  binary flags, integer
-and floating  point numerical  values and enumerations  of categorical
-values.  We also need designs  that minimize the number of experiments
-needed for identifying  the most relevant factors of  a problem, since
-at this moment we are not interested in a precise analytical model.
+Our application of the DoE methodology requires support for factors of different
+types and  numbers of levels, such  as binary flags, integer  and floating point
+numerical values and  enumerations of categorical values.  We  also need designs
+that minimize the number of experiments needed for identifying the most relevant
+factors of a  problem, since at this  moment we are not interested  in a precise
+analytical model.
 
-The  design construction  techniques that  fit these  requirements are
-limited.   Considering flexibility  of application  and effectiveness,
-the  best  candidate we  have  found  so  far are  /D-Optimal/  designs.
-Considering that  we are  going to  analyze the  response of  a design
-using  a linear  model  and ANOVA,  the /D-Efficiency/  of  a design  is
-inversely proportional to the /geometric mean/ of the /eigenvalues/ of the
-design's  /covariance   matrix/.   A  D-Optimal  design   has  the  best
-D-Efficiency, and our current approach  is based on D-Optimal designs.
-Appendix\nbsp\ref{sec:dopt}  presents  more  detailed description  of  the
-computation of the D-Optimality criterion.
+The design construction techniques that  fit these requirements are limited.  We
+identified four potential  techniques, described in the  following paragraphs: a
+modification  of  /screening/ that  allows  factors  with  more than  two  levels;
+/contractive replacement/, that generates mixed-level designs from 2-level ones; a
+/direct generation/ algorithm  for the construction of  small multi-level designs;
+and  D-Optimal designs,  a  flexible  construction technique  that  we ended  up
+choosing for our approach.
 
-We obtained promising results with our approach on the autotuning of a
-Laplacian kernel for GPUs, where the entire search space was available
-and the performance model was  known.  Our approach consistently found
-optimizations within 1% of the global optimum, while using half of the
-allotted budget. We then performed  a more comprehensive evaluation of
-our        method        on         the        SPAPT        autotuning
-benchmark\nbsp{}\cite{balaprakash2012spapt},   which  contains   a  set   of
-parametrized HPC  kernels with large  and complex search  spaces. This
-work  was published\nbsp\cite{bruel2019autotuning}  at  the /2019  IEEE/ACM
-International Symposium in Cluster, Cloud,  and Grid Computing/, and is
-reproduced in Appendix\nbsp\ref{sec:CCGRID}.
+In  the modified  screening technique,  or /2-level  screening with  random level
+sampling/, factors  with more than two  levels are sampled at  two random levels.
+This enables  using small design  such as the Plackett-Burman  screening design.
+Advantages are  the small design  size and  good estimation capability  for main
+effects.   Disadvantages are  the incapability  of estimating  interactions, but
+mainly the lack of information regarding the response for levels not selected in
+the initial screening.
+
+In  /contractive replacement/,  an  initial  2-Level design  is  used to  generate
+mixed-level designs by re-encoding columns into a new single column representing
+a multi-level  factor. The contractive  replacement of Addelman-Kempthorne  is a
+strategy  of  this kind.   Advantages  are  also  small  design sizes  and  good
+estimation   capability  of   main  effects.    Additionally,  the   contractive
+replacement  technique keeps  orthogonality of  designs.  Disadvantages  are the
+requirements on the  initial designs. Not all 2-level designs  can be contracted
+with those methods if orthogonality is desired.
+
+The    /direct     generation/    algorithm    presented    by     Grömping    and
+Fontana\nbsp\cite{ulrike2018algorithm} enables the generation of multi-level designs
+with the  Generalized Minimum Aberration  optimality criterion by  solving mixed
+integer problems.  Advantages are the  direct generation of  multi-level designs
+and  the optimality  criteria.  Disadvantages  are the  use  of proprietary  MIP
+solvers and  the limitations on the  size and shape  of the designs that  can be
+generated.
+
+Considering flexibility of application and  effectiveness, the best candidate we
+have found  so far  are /D-Optimal/  designs. The DoE  methodology uses  /models/ to
+explore  a search  space. If  the  model is  correct,  we can  benefit from  its
+predictions regarding  the search space. Figure\nbsp[[fig:sampling-comparison]]  shows 4
+strategies for exploring a  search space defined by a function of  the form $z =
+\alpha{}x^2  + \beta{}y^2  + \varepsilon$.   All strategies  use the  same budget  of 50  points.  /Random
+Sampling/ chooses points  uniformly between all possible  points. /Latin Hypercube
+Sampling/ chooses points  that maximize the coverage of the  search space and the
+distance between samples.  Sampling with  a /D-Optimal with Linear Model/ approach
+will sample the search space assuming it is defined by a function of the form $z
+= \alpha{}x + \beta{}y + \varepsilon$, and sampling with a /D-Optimal with Quadratic Model/ approach will
+sample the search  space assuming it is defined  by a function of the  form $z =
+\alpha{}x^2 + \beta{}y^2 + \varepsilon$, which happens to  be the correct assumption in this case. We can
+see that using the correct model for the DoE sampling strategies produces better
+results, but  the incorrect  linear model  is still  capable of  exploiting some
+structure of the search space.
+
+#+NAME: fig:sampling-comparison
+#+CAPTION: Exploration of the search space using a fixed budget of 50 points. The ``$\color{red}\boldsymbol{+}$'' represents the best point found by each strategy
+#+ATTR_LATEX: :width 0.94\textwidth :placement [t]
+[[../../img/report_sampling_comparison.pdf]]
+
+Construction of D-Optimal designs is made by selecting points, from all possible
+search space  points, that maximize  the /D-Criterion/  metric.  This metric  is a
+measure of  the /variance of  the estimators/ for  the coefficients of  the target
+model.  The  higher the value  of the D-Criterion,  the smaller the  variance of
+estimators.  The  model matrix $\mathbf{M}_{n,k}$,  built using model and  a design
+with  $n$ experiments  and  $k$  factors, is  used  to  compute the  D-Criterion
+$D(\mathbf{M}_{n, k}) \in [0,1]$. The D-Criterion of a design is defined as
+#+begin_export latex
+\[
+\text{D}(\mathbf{M}_{n, k}) = \left|\dfrac{\mathbf{M}^{\top}\mathbf{M}}{k}\right|^{\left(\dfrac{1}{n}\right)}\text{.}
+\]
+#+end_export
+A D-Optimal design maximizes the D-Criterion,  and our current approach is based
+on  D-Optimal   designs.   Appendix\nbsp\ref{sec:dopt}  presents  a   more  detailed
+description of the computation of the D-Optimality criterion.
+
+#+NAME: fig:iteration-best
+#+CAPTION: Cost of best points found on each run, and the iteration where
+#+CAPTION: they were found. Our approach (DLMT) found similar speedups using
+#+CAPTION: smaller budgets than Random Sampling (RS) for kernels marked with ``[+]'' /green/ headers.
+#+CAPTION: Ellipses delimit an estimate of where 95% of the underlying distribution lies
+#+ATTR_LATEX: :width 0.7\textwidth
+[[../../img/report_iteration_best_comparison.pdf]]
+
+We obtained promising results with our approach on the autotuning of a Laplacian
+kernel for GPUs, where the entire search space was available and the performance
+model was known.  Our approach (DLMT) consistently found optimizations within 1%
+of  the  global optimum,  while  using  half of  the  allotted  budget. We  then
+performed a more  comprehensive evaluation of our method on  17 kernels from the
+SPAPT autotuning benchmark\nbsp{}\cite{balaprakash2012spapt}, which  contains a set of
+parametrized HPC kernels with large and complex  search spaces.  For 8 of the 17
+SPAPT  kernels,  shown  in   Figure\nbsp[[fig:iteration-best]],  our  approach  achieved
+significant speedups,  similar to  those found by  a random  sampling algorithm,
+while using a  significantly smaller budget of measurements.   Our approach also
+spent less  measurements in regions  of the  search space where  performance was
+worse.  This work was  published\nbsp\cite{bruel2019autotuning} at the /2019 IEEE/ACM
+International Symposium in Cluster, Cloud, and Grid Computing/, and is reproduced
+in Appendix\nbsp\ref{sec:CCGRID}.
 * Objectives
-We are  currently working on  improving our approach by  improving the
-designs produced at  each step and by leveraging  user interaction and
-knowledge more effectively .  We would  like to improve the quality of
-the  designs produced  by our  approach, measured  by the  predictions
-derived from a performance model  obtained from a linear regression on
-experimental data, and by the D-Optimality criterion. We are achieving
-improvements in  relation to  the standard  approach, and  the ongoing
-work in this direction is presented in Appendix\nbsp\ref{sec:dopt}.
+We are  currently working  on improving  our approach  by improving  the designs
+produced at  each step  and by  leveraging user  interaction and  knowledge more
+effectively .  We would  like to improve the quality of  the designs produced by
+our  approach, measured  by the  predictions  derived from  a performance  model
+obtained from a linear regression on  experimental data, and by the D-Optimality
+criterion. We are  achieving improvements in relation to  the standard approach,
+and the ongoing work in this direction is presented in Appendix\nbsp\ref{sec:dopt}.
 
-We  are  also   analyzing  the  results  from  our   recent  paper  on
-CCGRID\nbsp\cite{bruel2019autotuning},            reproduced            in
-Appendix\nbsp\ref{sec:CCGRID}, which were obtained by an automated version
-of our approach.  We hope that these analyses  will help understanding
-the  impact that  direct user  supervision  could have  had on  factor
-elimination  and design  construction.   Our objective  is to  perform
-non-automated  experiments  using  SPAPT   kernels,  to  showcase  the
-potential  of user-assisted  optimization.  The  ongoing work  on this
-direction is presented in Appendix\nbsp\ref{sec:analyseCCGRID}.
+We   are   also    analyzing   the   results   from   our    recent   paper   on
+CCGRID\nbsp\cite{bruel2019autotuning},   reproduced  in   Appendix\nbsp\ref{sec:CCGRID},
+which were obtained by an automated version of our approach.  We hope that these
+analyses will help  understanding the impact that direct  user supervision could
+have had  on factor elimination  and design  construction.  Our objective  is to
+perform non-automated experiments using SPAPT kernels, to showcase the potential
+of user-assisted optimization.  The ongoing  work on this direction is presented
+in Appendix\nbsp\ref{sec:analyseCCGRID}.
 
-It would also be valuable to this  thesis to revisit the case study on
-FPGAs, where  we would explore  the large search spaces  of industrial
-FPGA kernels, with strong constraints  on measurement time, since such
-kernels can  take up  to several  hours to  compile. This  study would
-provide an interesting scenario to test our DoE approach.
+It would  also be valuable to  this thesis to  revisit the case study  on FPGAs,
+where we would explore the large  search spaces of industrial FPGA kernels, with
+strong  constraints on  measurement  time, since  such kernels  can  take up  to
+several hours  to compile. This study  would provide an interesting  scenario to
+test our DoE approach.
 * Schedule
-Table\nbsp[[tab:sched]] presents a tentative schedule for the months until May
-2020, which is the predicted date  for the defense. The remaining time
-is divided in 3  periods of 5, 5 and 4 months.   We intend to continue
-studying  and improving  our  approach  to autotuning  in  the next  2
-periods,  extending the  work  presented in  Appendixes\nbsp\ref{sec:dopt}
-and\nbsp\ref{sec:analyseCCGRID}.  These activities  are represented by the
-lines /Sampling for D-Optimal Designs/ and /User-Centered Optimization/ in
-Table\nbsp[[tab:sched]]. We  expect that the  studies and improvements  of our
-approach will allow extending the work done in our CCGRID paper, which
-we intend  to submit to  a journal.  We would  also like to  apply our
-approach  to the  FPGA domain  in  the form  of a  case study.   These
-activities would take the last  2 periods. Finally, the thesis writing
-will take place during the last period.
+Table\nbsp[[tab:sched]] presents  a tentative  schedule for the  months until  May 2020,
+which is the predicted date for the  defense. The remaining time is divided in 3
+periods of 5, 5 and 4 months.   We intend to continue studying and improving our
+approach to  autotuning in the next  2 periods, extending the  work presented in
+Appendixes\nbsp\ref{sec:dopt}  and\nbsp\ref{sec:analyseCCGRID}.   These  activities  are
+represented  by  the lines  /Sampling  for  D-Optimal Designs/  and  /User-Centered
+Optimization/ in Table\nbsp[[tab:sched]]. We expect  that the studies and improvements of
+our approach will  allow extending the work  done in our CCGRID  paper, which we
+intend to submit to a journal.  We would  also like to apply our approach to the
+FPGA domain in the form of a case study.  These activities would take the last 2
+periods. Finally, the thesis writing will take place during the last period.
 
 #+NAME: tab:sched
 #+ATTR_LATEX: :booktabs t :align llll
@@ -341,28 +697,33 @@ will take place during the last period.
 \lhead{\textbf{A. CV}}
 \includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/cv.pdf}
 
+\fakesection{Courses}
+\label{sec:courses}
+\lhead{\textbf{B. Courses}}
+\includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/recapitulatif_formations.pdf}
+
 \fakesection{Publication at the CCPE Journal}
 \label{sec:CCPE}
-\lhead{\textbf{B. Publication at the CCPE Journal}}
+\lhead{\textbf{C. Publication at the CCPE Journal}}
 \includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/ccpe16.pdf}
 
 \fakesection{Publication at the IEEE ReConFig Conference}
 \label{sec:reconfig}
-\lhead{\textbf{C. Publication at the IEEE ReConFig Conference}}
+\lhead{\textbf{D. Publication at the IEEE ReConFig Conference}}
 \includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/reconfig17.pdf}
 
 \fakesection{Publication at the CCGRID Conference}
 \label{sec:CCGRID}
-\lhead{\textbf{D. Publication at the CCGRID Conference}}
+\lhead{\textbf{E. Publication at the CCGRID Conference}}
 \includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/ccgrid19.pdf}
 
 \fakesection{Comparing Sampling Strategies for Constructing D-Optimal Designs}
 \label{sec:dopt}
-\lhead{\textbf{E. Comparing Sampling Strategies for Constructing D-Optimal Designs}}
+\lhead{\textbf{F. Comparing Sampling Strategies for Constructing D-Optimal Designs}}
 \includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/dopt_sampling.pdf}
 
 \fakesection{Analysing Optimizations from the CCGRID Paper}
 \label{sec:analyseCCGRID}
-\lhead{\textbf{E. Analysing Optimizations from the CCGRID Paper}}
+\lhead{\textbf{G. Analysing Optimizations from the CCGRID Paper}}
 \includepdf[pages={1-},pagecommand={\thispagestyle{fancy}},frame=true,scale=.9]{pdf/analysing_ccgrid19.pdf}
 #+END_EXPORT
