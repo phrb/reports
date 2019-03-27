@@ -45,6 +45,11 @@ Per Nikolaj~D Bukh.
   experimental design, measurement, simulation and modeling}.
 \newblock JSTOR, 1992.
 
+\bibitem{fedorov1972theory}
+Valerii~Vadimovich Fedorov.
+\newblock {\em Theory of optimal experiments}.
+\newblock Elsevier, 1972.
+
 \bibitem{fisher1937design}
 Ronald~Aylmer Fisher.
 \newblock {\em The design of experiments}.
@@ -80,5 +85,10 @@ Robin~L Plackett and J~Peter Burman.
 Keith Seymour, Haihang You, and Jack Dongarra.
 \newblock A comparison of search heuristics for empirical code optimization.
 \newblock In {\em CLUSTER}, pages 421--429, 2008.
+
+\bibitem{wheeler2014algdesign}
+Bob Wheeler.
+\newblock {\em AlgDesign: Algorithmic Experimental Design}, 2014.
+\newblock {R} package version 1.1-7.3.
 
 \end{thebibliography}

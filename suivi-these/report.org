@@ -593,12 +593,15 @@ significance of  each factor, we  can think of  that intuitively by  noting that
 less significant  factors will  have corresponding values  in $\bm{\beta}$  close to
 zero.
 
-We identified  four other potential  DoE techniques, described in  the following
-paragraphs: a modification  of screening that allows factors with  more than two
-levels; /contractive replacement/, that generates mixed-level designs from 2-level
-ones; a  /direct generation/ algorithm  for the construction of  small multi-level
-designs; and D-Optimal designs, a  flexible construction technique that we ended
-up choosing for our approach.
+Despite  being   parsimonious,  screening  designs  are   extremely  restrictive
+regarding the types of factors supported. Searching for techniques that could be
+applied  to our  specific  autotuning  problems, we  identified  four other  DoE
+techniques with potential, described in the following paragraphs: a modification
+of  screening  that  allows  factors  with more  than  two  levels;  /contractive
+replacement/,  that generates  mixed-level designs  from 2-level  ones; a  /direct
+generation/  algorithm for  the construction  of small  multi-level designs;  and
+D-Optimal designs, a  flexible construction technique that we  ended up choosing
+for our approach.
 
 In  the modified  screening technique,  or /2-level  screening with  random level
 sampling/, factors  with more than two  levels are sampled at  two random levels.
@@ -608,7 +611,7 @@ effects.   Disadvantages are  the incapability  of estimating  interactions, but
 mainly the lack of information regarding the response for levels not selected in
 the initial screening.
 
-In  /contractive replacement/,  an  initial  2-Level design  is  used to  generate
+In  /contractive replacement/,  an  initial  2-level design  is  used to  generate
 mixed-level designs by re-encoding columns into a new single column representing
 a multi-level  factor. The contractive  replacement of Addelman-Kempthorne  is a
 strategy  of  this kind.   Advantages  are  also  small  design sizes  and  good
@@ -630,17 +633,18 @@ have found  so far  are /D-Optimal/  designs. The DoE  methodology uses  /models
 explore  a search  space. If  the  model is  correct,  we can  benefit from  its
 predictions regarding  the search space. Figure\nbsp[[fig:sampling-comparison]]  shows 4
 strategies for exploring a  search space defined by a function of  the form $z =
-\alpha{}x^2  + \beta{}y^2  + \varepsilon$.   All strategies  use the  same budget  of 50  points.  /Random
-Sampling/ chooses points  uniformly between all possible  points. /Latin Hypercube
-Sampling/ chooses points  that maximize the coverage of the  search space and the
-distance between samples.  Sampling with  a /D-Optimal with Linear Model/ approach
-will sample the search space assuming it is defined by a function of the form $z
-= \alpha{}x + \beta{}y + \varepsilon$, and sampling with a /D-Optimal with Quadratic Model/ approach will
+\alpha{}x^2  + \beta{}y^2  + \varepsilon$.   All strategies  use the  same budget  of 50  points.
+
+/Random  Sampling/ chooses  points uniformly  between all  possible points.  /Latin
+Hypercube Sampling/ chooses points that maximize the coverage of the search space
+and  the distance  between samples.   With a  /linear model  assumption/, we  will
 sample the search  space assuming it is defined  by a function of the  form $z =
-\alpha{}x^2 + \beta{}y^2 + \varepsilon$, which happens to  be the correct assumption in this case. We can
-see that using the correct model for the DoE sampling strategies produces better
-results, but  the incorrect  linear model  is still  capable of  exploiting some
-structure of the search space.
+\alpha{}x +  \beta{}y + \varepsilon$.   With a  /quadratic model assumption/,  we will sample  the search
+space assuming  it is defined by  a function of  the form $z  = \alpha{}x^2 + \beta{}y^2  + \varepsilon$,
+which happens to be  the correct assumption in this case. We  can see that using
+the correct model  for the DoE sampling strategies produces  better results, but
+the incorrect linear model is still  capable of exploiting some structure of the
+search space.
 
 #+NAME: fig:sampling-comparison
 #+CAPTION: Exploration of the search space using a fixed budget of 50 points. The ``$\color{red}\boldsymbol{+}$'' represents the best point found by each strategy
@@ -651,17 +655,19 @@ Construction of D-Optimal designs is made by selecting points, from all possible
 search space  points, that maximize  the /D-Criterion/  metric.  This metric  is a
 measure of  the /variance of  the estimators/ for  the coefficients of  the target
 model.  The  higher the value  of the D-Criterion,  the smaller the  variance of
-estimators.  The  model matrix $\mathbf{M}_{n,k}$,  built using model and  a design
-with  $n$ experiments  and  $k$  factors, is  used  to  compute the  D-Criterion
-$D(\mathbf{M}_{n, k}) \in [0,1]$. The D-Criterion of a design is defined as
+estimators.    We    use   Fedorov's    algorithm\nbsp{}\cite{fedorov1972theory}   for
+constructing   D-Optimal   designs,   implemented   in  =R=   in   the   =AlgDesign=
+package\nbsp{}\cite{wheeler2014algdesign}  The  model  matrix  $\mathbf{M}_{n,k}$,  built
+using  model and  a design  with $n$  experiments and  $k$ factors,  is used  to
+compute  the D-Criterion  $D(\mathbf{M}_{n, k})  \in [0,1]$.  The D-Criterion  of a
+design is defined as
 #+begin_export latex
 \[
-\text{D}(\mathbf{M}_{n, k}) = \left|\dfrac{\mathbf{M}^{\top}\mathbf{M}}{k}\right|^{\left(\dfrac{1}{n}\right)}\text{.}
+\text{D}(\mathbf{M}_{n, k}) = \left|\dfrac{\mathbf{M}^{\top}\mathbf{M}}{k}\right|^{\left(\dfrac{1}{n}\right)}\text{,}
 \]
 #+end_export
-A D-Optimal design maximizes the D-Criterion,  and our current approach is based
-on  D-Optimal   designs.   Appendix\nbsp\ref{sec:dopt}  presents  a   more  detailed
-description of the computation of the D-Optimality criterion.
+and  Appendix\nbsp\ref{sec:dopt}  presents  a   more  detailed  discussion  of  this
+computation.
 
 #+NAME: fig:iteration-best
 #+CAPTION: Cost of best points found on each run, and the iteration where
